@@ -7,7 +7,14 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 import requests
 import base64
+# ---------------
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from datetime import datetime
+from sklearn.metrics.pairwise import cosine_similarity
 
+# load .env variables
 load_dotenv()
 
 # hold credentials - store in seperated .env file -
@@ -33,6 +40,7 @@ def get_token():
     data = {
         'grant_type': 'client_credentials'
     }
+
     response = requests.post(token_url, data=data, headers=headers)
 
     if response.status_code == 200:
@@ -48,7 +56,7 @@ def get_token():
 def get_auth_header(token):
     return {"Authorization": "Bearer " + token}
 
-
+# function for searching for artist
 def search_for_artist(token, artist_name):
     url = "https://api.spotify.com/v1/search"
     headers = get_auth_header(token)
@@ -60,7 +68,7 @@ def search_for_artist(token, artist_name):
     json_result = result.json()["artists"]["items"]
     
 
-    print(json_result[0])
+    # print(json_result[0])
 
 
 def get_trending_playlist_data(playlist_id, access_token):
@@ -135,4 +143,30 @@ def get_trending_playlist_data(playlist_id, access_token):
 
 token = get_token()
 
-search_for_artist(token, "khalid")
+playlist_id = '4MnplqXo55mzspyBqFnFgs'
+
+# Call the function to get the music data from the playlist and store it in a DataFrame
+# extract music data from the specified playlist using token
+music_df = get_trending_playlist_data(playlist_id, token)
+
+# Display the DataFrame - contains music data
+print(music_df)
+
+# check if the data has any null values
+print(music_df.isnull().sum())
+
+# store the music data
+data = music_df
+
+# function to calculate wieghted popularity scores
+def calculate_weighted_popularity(release_date):
+    # Convert the release date to datetime object
+    release_date = datetime.strptime(release_date, '%Y-%m-%d')
+
+    # Calculate the time span between release date and today's date
+    time_span = datetime.now() - release_date
+
+    # Calculate the weighted popularity score based on time span (e.g., more recent releases have higher weight)
+    # the newer the release, the higher the popularity 
+    weight = 1 / (time_span.days + 1)
+    return weight
